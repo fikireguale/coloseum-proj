@@ -27,6 +27,205 @@ class StudentAgent(Agent):
             "l": 3,
         }
 
+    class Game:
+        def init(self, board_size, chess_board, p1, p2, max_step):
+                self.board_size = board_size
+                self.chess_board = deepcopy(chess_board)
+                self.pos_a = p1
+                self.pos_b = p2
+                self.max_step = max_step
+            ):
+            """
+            Initialize the game world
+
+            Parameters
+            ----------
+            player_1: str
+                The registered class of the first player
+            player_2: str
+                The registered class of the second player
+            board_size: int
+                The size of the board. If None, board_size = a number between MIN_BOARD_SIZE and MAX_BOARD_SIZE
+            """
+            
+            self.player_1_name = player_1
+            self.player_2_name = player_2
+
+            # Moves (Up, Right, Down, Left)
+            self.moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
+
+            # Opposite Directions
+            self.opposites = {0: 2, 1: 3, 2: 0, 3: 1}
+            self.board_size = board_size
+
+            # Whose turn to step
+            self.turn = 0
+
+             def get_current_player(self):
+        """
+        Get the positions of the current player
+
+        Returns
+        -------
+        tuple of (current_player_obj, current_player_pos, adversary_player_pos)
+        """
+        if not self.turn:
+            return self.p0, self.p0_pos, self.p1_pos
+        else:
+            return self.p1, self.p1_pos, self.p0_pos
+
+        def step_player(self, chess_board, my_pos, adv_pos, max_step):
+            """
+            Implement the step function of your dummy agent here (for simulations).
+            You should return a tuple of ((x, y), dir),
+            """
+            if self.p1: 
+
+
+            else:
+            
+            
+
+            # dummy return
+            return my_pos, self.dir_map["u"]
+
+        def step_simulation(self):
+            """
+            Take a step in the game world.
+            Runs the agents' step function and update the game board accordingly.
+            If the agents' step function raises an exception, the step will be replaced by a Random Walk.
+
+            Returns
+            -------
+            results: tuple
+                The results of the step containing (is_endgame, player_1_score, player_2_score)
+            """
+            cur_player, cur_pos, adv_pos = self.get_current_player()
+
+            if 
+
+            try:
+                # Run the agents step function
+                start_time = time()
+                next_pos, dir = cur_player.step_player(
+                    deepcopy(self.chess_board),
+                    tuple(cur_pos),
+                    tuple(adv_pos),
+                    self.max_step,
+                )
+                time_taken = time() - start_time
+                self.update_player_time(time_taken)
+
+                next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
+                if not self.check_boundary(next_pos):
+                    raise ValueError("End position {} is out of boundary".format(next_pos))
+                if not 0 <= dir <= 3:
+                    raise ValueError(
+                        "Barrier dir should reside in [0, 3], but your dir is {}".format(
+                            dir
+                        )
+                    )
+                if not self.check_valid_step(cur_pos, next_pos, dir):
+                    raise ValueError(
+                        "Not a valid step from {} to {} and put barrier at {}, with max steps = {}".format(
+                            cur_pos, next_pos, dir, self.max_step
+                        )
+                    )
+            except BaseException as e:
+                ex_type = type(e).__name__
+                if (
+                        "SystemExit" in ex_type and isinstance(cur_player, HumanAgent)
+                ) or "KeyboardInterrupt" in ex_type:
+                    sys.exit(0)
+                print(
+                    "An exception raised. The traceback is as follows:\n{}".format(
+                        traceback.format_exc()
+                    )
+                )
+                print("Execute Random Walk!")
+                next_pos, dir = self.random_walk(tuple(cur_pos), tuple(adv_pos))
+                next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
+
+            # Print out each step
+            # print(self.turn, next_pos, dir)
+            logger.info(
+                f"Player {self.player_names[self.turn]} moves to {next_pos} facing {self.dir_names[dir]}. Time taken this turn (in seconds): {time_taken}"
+            )
+            if not self.turn:
+                self.p0_pos = next_pos
+            else:
+                self.p1_pos = next_pos
+            # Set the barrier to True
+            r, c = next_pos
+            self.set_barrier(r, c, dir)
+
+            # Change turn
+            self.turn = 1 - self.turn
+
+            results = self.check_endgame()
+            self.results_cache = results
+
+            # Print out Chessboard for visualization
+            if self.display_ui:
+                self.render()
+                if results[0]:
+                    # If game ends and displaying the ui, wait for user input
+                    click.echo("Press a button to exit the game.")
+                    try:
+                        _ = click.getchar()
+                    except:
+                        _ = input()
+            return results
+
+        def run(self, swap_players=False, board_size=None):
+            self.reset(swap_players=swap_players, board_size=board_size)
+            is_end, p0_score, p1_score = self.game.step()
+            while not is_end:
+                is_end, p0_score, p1_score = self.world.step_simulation()
+            return p0_score, p1_score
+
+        def autoplay(self):
+            """
+            Run multiple simulations of the gameplay and aggregate win %
+            """
+            p1_win_count = 0
+            p2_win_count = 0
+            p1_times = []
+            p2_times = []
+            if self.args.display:
+                logger.warning("Since running autoplay mode, display will be disabled")
+            self.args.display = False
+            with all_logging_disabled():
+                for i in tqdm(range(self.args.autoplay_runs)):
+                    swap_players = i % 2 == 0
+                    board_size = np.random.randint(args.board_size_min, args.board_size_max)
+                    p0_score, p1_score, p0_time, p1_time = self.run(
+                        swap_players=swap_players, board_size=board_size
+                    )
+                    if swap_players:
+                        p0_score, p1_score, p0_time, p1_time = (
+                            p1_score,
+                            p0_score,
+                            p1_time,
+                            p0_time,
+                        )
+                    if p0_score > p1_score:
+                        p1_win_count += 1
+                    elif p0_score < p1_score:
+                        p2_win_count += 1
+                    else:  # Tie
+                        p1_win_count += 1
+                        p2_win_count += 1
+                    p1_times.extend(p0_time)
+                    p2_times.extend(p1_time)
+
+            logger.info(
+                f"Player {PLAYER_1_NAME} win percentage: {p1_win_count / self.args.autoplay_runs}. Maxium turn time was {np.round(np.max(p1_times), 5)} seconds.")
+            logger.info(
+                f"Player {PLAYER_2_NAME} win percentage: {p2_win_count / self.args.autoplay_runs}. Maxium turn time was {np.round(np.max(p2_times), 5)} seconds.")
+                return p1_win_count, p2_win_count
+
+
     class Node:
         def __init__(self, state, parent=None):
             self.state = state
@@ -40,6 +239,8 @@ class StudentAgent(Agent):
             self.adv_pos = state[2]
             self.max_step = state[3]
             self.board_size = len(self.chess_board)
+            self.p1 = True
+            self.game = Game(self, board_size, chess_board, p1, max_step)
 
         def get_untried_actions(self):
             # Moves (Up, Right, Down, Left)
@@ -127,11 +328,17 @@ class StudentAgent(Agent):
 
         def rollout_policy(self):
             # Define the policy for the rollout phase, typically random
-            pass
+            # 
+            self.wins = self.run(swap_players=False, board_size=None)
+            return self
 
         def expand(self):
             # Expand the node by creating a new child node
-            pass
+            state = [chess_board, my_pos, adv_pos, max_step]
+            child = Node(state)
+            child.p1 = not self.p1
+            self.children.append(child)
+            return child
 
         def best_child(self, c_param=1.41):
             # Select the best child using the UCB1 formula
@@ -156,10 +363,11 @@ class StudentAgent(Agent):
         return current_node
 
     def rollout(node):
-        """Perform a rollout from the given node to the end of the game."""
+        """Play 1 game and get 1 result: Perform a rollout from the given node to the end of the game."""
         current_state = node.state
         while not current_state.is_terminal():
-            current_state = current_state.rollout_policy()
+            #current_state = current_state.rollout_policy()
+            current_state.rollout_policy()
         return current_state.get_result()
 
     def backpropagate(node, result):
@@ -178,141 +386,6 @@ class StudentAgent(Agent):
         
         return max(root.children, key=lambda x: x.visits).state
 
-    def step_simulation(self):
-        """
-        Take a step in the game world.
-        Runs the agents' step function and update the game board accordingly.
-        If the agents' step function raises an exception, the step will be replaced by a Random Walk.
-
-        Returns
-        -------
-        results: tuple
-            The results of the step containing (is_endgame, player_1_score, player_2_score)
-        """
-        cur_player, cur_pos, adv_pos = self.get_current_player()
-
-        try:
-            # Run the agents step function
-            start_time = time()
-            next_pos, dir = cur_player.step(
-                deepcopy(self.chess_board),
-                tuple(cur_pos),
-                tuple(adv_pos),
-                self.max_step,
-            )
-            time_taken = time() - start_time
-            self.update_player_time(time_taken)
-
-            next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
-            if not self.check_boundary(next_pos):
-                raise ValueError("End position {} is out of boundary".format(next_pos))
-            if not 0 <= dir <= 3:
-                raise ValueError(
-                    "Barrier dir should reside in [0, 3], but your dir is {}".format(
-                        dir
-                    )
-                )
-            if not self.check_valid_step(cur_pos, next_pos, dir):
-                raise ValueError(
-                    "Not a valid step from {} to {} and put barrier at {}, with max steps = {}".format(
-                        cur_pos, next_pos, dir, self.max_step
-                    )
-                )
-        except BaseException as e:
-            ex_type = type(e).__name__
-            if (
-                    "SystemExit" in ex_type and isinstance(cur_player, HumanAgent)
-            ) or "KeyboardInterrupt" in ex_type:
-                sys.exit(0)
-            print(
-                "An exception raised. The traceback is as follows:\n{}".format(
-                    traceback.format_exc()
-                )
-            )
-            print("Execute Random Walk!")
-            next_pos, dir = self.random_walk(tuple(cur_pos), tuple(adv_pos))
-            next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
-
-        # Print out each step
-        # print(self.turn, next_pos, dir)
-        logger.info(
-            f"Player {self.player_names[self.turn]} moves to {next_pos} facing {self.dir_names[dir]}. Time taken this turn (in seconds): {time_taken}"
-        )
-        if not self.turn:
-            self.p0_pos = next_pos
-        else:
-            self.p1_pos = next_pos
-        # Set the barrier to True
-        r, c = next_pos
-        self.set_barrier(r, c, dir)
-
-        # Change turn
-        self.turn = 1 - self.turn
-
-        results = self.check_endgame()
-        self.results_cache = results
-
-        # Print out Chessboard for visualization
-        if self.display_ui:
-            self.render()
-            if results[0]:
-                # If game ends and displaying the ui, wait for user input
-                click.echo("Press a button to exit the game.")
-                try:
-                    _ = click.getchar()
-                except:
-                    _ = input()
-        return results
-
-    def run(self, swap_players=False, board_size=None):
-        self.reset(swap_players=swap_players, board_size=board_size)
-        is_end, p0_score, p1_score = self.world.step()
-        while not is_end:
-            is_end, p0_score, p1_score = self.world.step_simulation()
-        logger.info(
-            f"Run finished. Player {PLAYER_1_NAME}: {p0_score}, Player {PLAYER_2_NAME}: {p1_score}"
-        )
-        return p0_score, p1_score, self.world.p0_time, self.world.p1_time
-
-    def autoplay(self):
-        """
-        Run multiple simulations of the gameplay and aggregate win %
-        """
-        p1_win_count = 0
-        p2_win_count = 0
-        p1_times = []
-        p2_times = []
-        if self.args.display:
-            logger.warning("Since running autoplay mode, display will be disabled")
-        self.args.display = False
-        with all_logging_disabled():
-            for i in tqdm(range(self.args.autoplay_runs)):
-                swap_players = i % 2 == 0
-                board_size = np.random.randint(args.board_size_min, args.board_size_max)
-                p0_score, p1_score, p0_time, p1_time = self.run(
-                    swap_players=swap_players, board_size=board_size
-                )
-                if swap_players:
-                    p0_score, p1_score, p0_time, p1_time = (
-                        p1_score,
-                        p0_score,
-                        p1_time,
-                        p0_time,
-                    )
-                if p0_score > p1_score:
-                    p1_win_count += 1
-                elif p0_score < p1_score:
-                    p2_win_count += 1
-                else:  # Tie
-                    p1_win_count += 1
-                    p2_win_count += 1
-                p1_times.extend(p0_time)
-                p2_times.extend(p1_time)
-
-        logger.info(
-            f"Player {PLAYER_1_NAME} win percentage: {p1_win_count / self.args.autoplay_runs}. Maxium turn time was {np.round(np.max(p1_times), 5)} seconds.")
-        logger.info(
-            f"Player {PLAYER_2_NAME} win percentage: {p2_win_count / self.args.autoplay_runs}. Maxium turn time was {np.round(np.max(p2_times), 5)} seconds.")
 
     def step(self, chess_board, my_pos, adv_pos, max_step):
         """
@@ -337,6 +410,11 @@ class StudentAgent(Agent):
         time_taken = time.time() - start_time
         
         print("My AI's turn took ", time_taken, "seconds.")
+
+        state = [chess_board, my_pos, adv_pos, max_step]
+        root = Node(state)
+
+        monte_carlo_tree_search(root, iterations=1000)
 
         # dummy return
         return my_pos, self.dir_map["u"]
