@@ -35,14 +35,37 @@ class StudentAgent(Agent):
             self.wins = 0
             self.visits = 0
             self.untried_actions = self.get_untried_actions()
+            self.chess_board = state[0]
+            self.my_pos = state[1]
+            self.adv_pos = state[2]
+            self.max_step = state[3]
 
         def get_untried_actions(self):
-            # Return a list of all possible actions from this state
-            pass
+            # Moves (Up, Right, Down, Left)
+            moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
+            seen = ()
+            bfs = [self.my_pos]
+            allowed_moves = []
+            # Pick steps random but allowable moves
+            while bfs:
+                r, c = bfs.pop(0)
+                # Build a list of the moves we can make
+                if math.dist(self.my_pos, [r, c]) + 1 > self.max_step:
+                    break
+
+                for d in range(0, 4):
+                    tmp_pos = (r + moves[d][0], c + moves[d][1])
+                    if not self.chess_board[r, c, d] and not self.adv_pos == tmp_pos and tmp_pos not in seen:
+                        bfs.append(tmp_pos)
+                        for i in range(0, 4):
+                            if not self.chess_board[tmp_pos[0], tmp_pos[1], i]:
+                                allowed_moves.append([tmp_pos, i])
+
+            return allowed_moves
 
         def is_terminal(self):
             # Check if the state is a terminal state
-            pass
+            return not self.get_untried_actions()
 
         def rollout_policy(self):
             # Define the policy for the rollout phase, typically random
@@ -59,7 +82,6 @@ class StudentAgent(Agent):
         def update(self, result):
             # Update this node's data with the simulation result
             pass
-    
 
     def ucb1(parent, child, c_param=1.41):
         """Calculate the UCB1 value for a child node."""
