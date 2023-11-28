@@ -61,18 +61,69 @@ class StudentAgent(Agent):
             # Whose turn to step
             self.turn = 0
 
-             def get_current_player(self):
-        """
-        Get the positions of the current player
+        def random_walk(self, my_pos, adv_pos):
+            """
+            Randomly walk to the next position in the board.
 
-        Returns
-        -------
-        tuple of (current_player_obj, current_player_pos, adversary_player_pos)
-        """
-        if not self.turn:
-            return self.p0, self.p0_pos, self.p1_pos
-        else:
-            return self.p1, self.p1_pos, self.p0_pos
+            Parameters
+            ----------
+            my_pos : tuple
+                The position of the agent.
+            adv_pos : tuple
+                The position of the adversary.
+            """
+            steps = np.random.randint(0, self.max_step + 1)
+
+            # Pick steps random but allowable moves
+            for _ in range(steps):
+                r, c = my_pos
+
+                # Build a list of the moves we can make
+                allowed_dirs = [ d                                
+                    for d in range(0,4)                                      # 4 moves possible
+                    if not self.chess_board[r,c,d] and                       # chess_board True means wall
+                    not adv_pos == (r+self.moves[d][0],c+self.moves[d][1])]  # cannot move through Adversary
+
+                if len(allowed_dirs)==0:
+                    # If no possible move, we must be enclosed by our Adversary
+                    break
+
+                random_dir = allowed_dirs[np.random.randint(0, len(allowed_dirs))]
+
+                # This is how to update a row,col by the entries in moves 
+                # to be consistent with game logic
+                m_r, m_c = self.moves[random_dir]
+                my_pos = (r + m_r, c + m_c)
+
+            # Final portion, pick where to put our new barrier, at random
+            r, c = my_pos
+            # Possibilities, any direction such that chess_board is False
+            allowed_barriers=[i for i in range(0,4) if not self.chess_board[r,c,i]]
+            # Sanity check, no way to be fully enclosed in a square, else game already ended
+            assert len(allowed_barriers)>=1 
+            dir = allowed_barriers[np.random.randint(0, len(allowed_barriers))]
+
+            return my_pos, dir
+
+        def set_barrier(self, r, c, dir):
+            # Set the barrier to True
+            self.chess_board[r, c, dir] = True
+            # Set the opposite barrier to True
+            move = self.moves[dir]
+            self.chess_board[r + move[0], c + move[1], self.opposites[dir]] = True
+
+        def get_current_player(self):
+            """
+            Get the positions of the current player
+
+            Returns
+            -------
+            tuple of (current_player_obj, current_player_pos, adversary_player_pos)
+            """
+            if not self.turn:
+                return self.p0, self.p0_pos, self.p1_pos
+            else:
+                return self.p1, self.p1_pos, self.p0_pos
 
         def step_player(self, chess_board, my_pos, adv_pos, max_step):
             """
@@ -80,14 +131,15 @@ class StudentAgent(Agent):
             You should return a tuple of ((x, y), dir),
             """
             if self.p1: 
-
-
+                print("Execute Random Walk!")
+                next_pos, dir = self.random_walk(tuple(cur_pos), tuple(adv_pos))
+                next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
             else:
+                print("Execute Random Walk!")
+                next_pos, dir = self.random_walk(tuple(cur_pos), tuple(adv_pos))
+                next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
+            return next_pos, dir
             
-            
-
-            # dummy return
-            return my_pos, self.dir_map["u"]
 
         def step_simulation(self):
             """
@@ -102,8 +154,6 @@ class StudentAgent(Agent):
             """
             cur_player, cur_pos, adv_pos = self.get_current_player()
 
-            if 
-
             try:
                 # Run the agents step function
                 start_time = time()
@@ -113,8 +163,6 @@ class StudentAgent(Agent):
                     tuple(adv_pos),
                     self.max_step,
                 )
-                time_taken = time() - start_time
-                self.update_player_time(time_taken)
 
                 next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
                 if not self.check_boundary(next_pos):
@@ -132,6 +180,7 @@ class StudentAgent(Agent):
                         )
                     )
             except BaseException as e:
+                '''
                 ex_type = type(e).__name__
                 if (
                         "SystemExit" in ex_type and isinstance(cur_player, HumanAgent)
@@ -142,6 +191,7 @@ class StudentAgent(Agent):
                         traceback.format_exc()
                     )
                 )
+                '''
                 print("Execute Random Walk!")
                 next_pos, dir = self.random_walk(tuple(cur_pos), tuple(adv_pos))
                 next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
@@ -162,27 +212,16 @@ class StudentAgent(Agent):
             # Change turn
             self.turn = 1 - self.turn
 
-            results = self.check_endgame()
-            self.results_cache = results
-
-            # Print out Chessboard for visualization
-            if self.display_ui:
-                self.render()
-                if results[0]:
-                    # If game ends and displaying the ui, wait for user input
-                    click.echo("Press a button to exit the game.")
-                    try:
-                        _ = click.getchar()
-                    except:
-                        _ = input()
+            results = self.endgame()
+            
             return results
 
         def run(self, swap_players=False, board_size=None):
-            self.reset(swap_players=swap_players, board_size=board_size)
-            is_end, p0_score, p1_score = self.game.step()
+            
+            is_end, p1_score = self.game.step_simulation()
             while not is_end:
-                is_end, p0_score, p1_score = self.world.step_simulation()
-            return p0_score, p1_score
+                is_end, p1_score = self.game.step_simulation()
+            return p1_score
 
         def autoplay(self):
             """
@@ -239,7 +278,7 @@ class StudentAgent(Agent):
             self.adv_pos = state[2]
             self.max_step = state[3]
             self.board_size = len(self.chess_board)
-            self.p1 = True
+            self.p1 = True # "random policy" "winning policy"
             self.game = Game(self, board_size, chess_board, p1, max_step)
 
         def get_untried_actions(self):
@@ -313,7 +352,7 @@ class StudentAgent(Agent):
             p0_score = list(father.values()).count(p0_r)
             p1_score = list(father.values()).count(p1_r)
             if p0_r == p1_r:
-                return False, p0_score, p1_score
+                return False, p0_score - p1_score
             player_win = None
             win_blocks = -1
             if p0_score > p1_score:
@@ -324,11 +363,10 @@ class StudentAgent(Agent):
                 win_blocks = p1_score
             else:
                 player_win = -1  # Tie
-            return True, p0_score, p1_score
+            return True, p0_score - p1_score
 
         def rollout_policy(self):
             # Define the policy for the rollout phase, typically random
-            # 
             self.wins = self.run(swap_players=False, board_size=None)
             return self
 
@@ -342,11 +380,10 @@ class StudentAgent(Agent):
 
         def best_child(self, c_param=1.41):
             # Select the best child using the UCB1 formula
-            pass
-
-        def update(self, result):
-            # Update this node's data with the simulation result
-            pass
+            l = []
+            for child in self.children:
+                l.append(self.ucb1(self, child))
+            return self.children[l.index(max(l))]
 
     def ucb1(parent, child, c_param=1.41):
             """Calculate the UCB1 value for a child node."""
@@ -366,7 +403,7 @@ class StudentAgent(Agent):
         """Play 1 game and get 1 result: Perform a rollout from the given node to the end of the game."""
         current_state = node.state
         while not current_state.is_terminal():
-            #current_state = current_state.rollout_policy()
+            #current_state = current_state.rollout_policy() # set follout policy to random play
             current_state.rollout_policy()
         return current_state.get_result()
 
@@ -414,7 +451,9 @@ class StudentAgent(Agent):
         state = [chess_board, my_pos, adv_pos, max_step]
         root = Node(state)
 
-        monte_carlo_tree_search(root, iterations=1000)
+        best = self.monte_carlo_tree_search(root, iterations=1000)
+
+        my_pos = best.my_pos
 
         # dummy return
         return my_pos, self.dir_map["u"]
