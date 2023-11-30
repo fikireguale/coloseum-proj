@@ -1,13 +1,10 @@
 # Student agent: Add your own agent here
 from agents.agent import Agent
 from store import register_agent
-import sys
 import numpy as np
-from copy import deepcopy
 import time
-import logging
-import math
-import random
+import copy
+import heapq
 
 
 @register_agent("student_agent")
