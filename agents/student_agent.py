@@ -151,16 +151,6 @@ class StudentAgent(Agent):
         """
         board_size = len(chess_board)
         
-        
-        '''
-        my_coord, my_dir = my_pos
-        my_pos = my_coord
-        '''
-        '''
-        adv_coord, adv_dir = adv_pos
-        adv_pos = adv_coord
-        '''
-        
         # Union-Find
         father = dict()
         for r in range(board_size):
@@ -214,16 +204,13 @@ class StudentAgent(Agent):
         '''
         return True, p0_score, p1_score
     
-    def game_ending_moves(self, valid_moves, my_pos, chess_board, adv_pos):
+    def sorted_moves(self, valid_moves, my_pos, chess_board, adv_pos):
         """
         Sorts all_possible_moves by running check_endgame() on each one
         Input: current game
         Output: wins, losses, ties, neither (all arrays)
         """
-        wins = []
-        losses = []
-        ties = []
-        neither = []
+        wins, losses, ties, neither = ([] for _ in range(4))
 
         for move in valid_moves:
             (r_c,dir) = move
@@ -237,7 +224,7 @@ class StudentAgent(Agent):
                 win_blocks = -1
                 if p0_score > p1_score: # student_agent wins
                     win_blocks = p0_score
-                    self.insert(wins, win_blocks, (r_c,dir)) # not putting the actual move in list
+                    self.insert(wins, win_blocks, (r_c,dir))
                 elif p0_score < p1_score: # student_agent loses
                     win_blocks = p1_score
                     self.insert(losses, win_blocks, (r_c,dir), ascending=False)
@@ -272,11 +259,9 @@ class StudentAgent(Agent):
     def best_move(self, my_pos, max_step, chess_board, adv_pos):
 
         moves = self.get_possible_moves(my_pos, max_step, chess_board, adv_pos)
-        wins, losses, ties, neither = self.game_ending_moves(moves, my_pos, chess_board, adv_pos)
-        game_enders = {"wins": wins, "losses": losses, "ties": ties, "neither": neither}
+        wins, losses, ties, neither = self.sorted_moves(moves, my_pos, chess_board, adv_pos)
+        sorted_moves = {"wins": wins, "losses": losses, "ties": ties, "neither": neither}
         my_move = None
-        # if game_enders["win"]:
-        #    return game_enders["win"][0]
 
         if wins:
             coord, dir = wins[0]
@@ -288,7 +273,7 @@ class StudentAgent(Agent):
         best_moves = []
         heapq.heapify(best_moves)
         chess_board_copy = copy.deepcopy(chess_board)
-        for m in game_enders["neither"]:
+        for m in sorted_moves["neither"]:
             coord, dir = m
             x, y = coord
             self.set_barrier(x, y, dir, chess_board_copy)
