@@ -136,15 +136,156 @@ class StudentAgent(Agent):
         move = self.moves[dir]
         chess_board[r + move[0], c + move[1], self.opposites[dir]] = False
 
+    def check_endgame(self, my_pos, chess_board, adv_pos):
+        """
+        Check if the game ends and compute the current score of the agents.
+
+        Returns
+        -------
+        is_endgame : bool
+            Whether the game ends.
+        player_0_score : int
+            The score of player 0, student_agent.
+        player_1_score : int
+            The score of player 1, student_agent's opponent.
+        """
+        board_size = len(chess_board)
+        print("the board size is", board_size)
+
+        my_coord, my_dir = my_pos
+        my_pos = my_coord
+        
+        adv_coord, adv_dir = adv_pos
+        adv_pos = adv_coord
+        
+        
+        # Union-Find
+        father = dict()
+        for r in range(board_size):
+            for c in range(board_size):
+                father[(r, c)] = (r, c)
+
+        def find(pos):
+            if father[pos] != pos:
+                father[pos] = find(father[pos])
+            return father[pos]
+
+        def union(pos1, pos2):
+            father[pos1] = pos2
+
+        for r in range(board_size):
+            for c in range(board_size):
+                for dir, move in enumerate(
+                    self.moves[1:3]
+                ):  # Only check down and right
+                    if chess_board[r, c, dir + 1]:
+                        continue
+                    pos_a = find((r, c))
+                    pos_b = find((r + move[0], c + move[1]))
+                    if pos_a != pos_b:
+                        union(pos_a, pos_b)
+
+        for r in range(board_size):
+            for c in range(board_size):
+                find((r, c))
+        p0_r = find(tuple(my_pos))
+        p1_r = find(tuple(adv_pos))
+        p0_score = list(father.values()).count(p0_r)
+        p1_score = list(father.values()).count(p1_r)
+        if p0_r == p1_r:
+            return False, p0_score, p1_score
+        player_win = None
+        win_blocks = -1
+        if p0_score > p1_score:
+            player_win = 0
+            win_blocks = p0_score
+        elif p0_score < p1_score:
+            player_win = 1
+            win_blocks = p1_score
+        else:
+            player_win = -1  # Tie
+        '''
+        if player_win >= 0:
+            # someone won
+        else:
+            # tie
+        '''
+        return True, p0_score, p1_score
+    
+    def game_ending_moves(self, valid_moves, my_pos, chess_board, adv_pos):
+        """
+        Sorts all_possible_moves by running check_endgame() on each one
+        Input: current game
+        Output: wins, losses, ties, neither (all arrays)
+        """
+        wins = []
+        losses = []
+        ties = []
+        neither = []
+        (adv_coord,dir) = adv_pos
+        adv_pos = adv_coord
+
+        for move in valid_moves:
+            (my_coord,dir) = move
+            move = my_coord
+            # play move on board
+            is_endgame, p0_score, p1_score = self.check_endgame(move, chess_board, adv_pos)
+            # check/sort
+            if not is_endgame:
+                neither.append(move)
+            else:
+                win_blocks = -1
+                if p0_score > p1_score: # student_agent wins
+                    win_blocks = p0_score
+                    self.insert(wins, win_blocks, move) # not putting the actual move in list
+                elif p0_score < p1_score: # student_agent loses
+                    win_blocks = p1_score
+                    self.insert(losses, win_blocks, move, ascending=False)
+                else:
+                    ties.append(move)
+            # undo move on board
+            coord, dir = move
+            r, c = coord
+            self.undo(r, c, dir, chess_board)
+
+        return wins, losses, ties, neither
+    
+    def insert(self, mlist, n, move, ascending = True):
+        index = len(mlist)
+        # Searching for the position
+        if ascending:
+            for i in range(len(mlist)):
+                if mlist[i] > n:
+                    index = i
+                    break
+        else:
+            for i in range(len(mlist)):
+                if mlist[i] < n:
+                    index = i
+                    break
+        # Inserting n in the list
+        if index == len(mlist):
+            mlist = mlist[:index] + [n]
+        else:
+            mlist = mlist[:index] + [n] + mlist[index:]
+        return mlist
+    
     def best_move(self, my_pos, max_step, chess_board, adv_pos):
 
         moves = self.get_possible_moves(my_pos, max_step, chess_board, adv_pos)
-
-        # game_enders = game_ending_moves()
-
+        wins, losses, ties, neither = self.game_ending_moves(moves, my_pos, chess_board, adv_pos)
+        game_enders = {"wins": wins, "losses": losses, "ties": ties, "neither": neither}
+        my_move = None
         # if game_enders["win"]:
         #    return game_enders["win"][0]
-        game_enders = {"neither": moves}
+
+        if wins:
+            coord, dir = wins[0]
+            return coord
+        elif not neither:
+            coord, dir = ties[0]
+            return coord
+
         best_moves = []
         heapq.heapify(best_moves)
         chess_board_copy = copy.deepcopy(chess_board)
@@ -187,7 +328,7 @@ class StudentAgent(Agent):
         # print()
         my_pos, a = self.best_move(my_pos, max_step, chess_board, adv_pos)
         # print("RETURNED MOVES", my_pos, a)
-        print("My AI's turn took ", time_taken, "seconds.")
+        #print("My AI's turn took ", time_taken, "seconds.")
 
         # dummy return
         return my_pos, a
