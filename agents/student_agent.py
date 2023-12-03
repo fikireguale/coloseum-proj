@@ -150,14 +150,16 @@ class StudentAgent(Agent):
             The score of player 1, student_agent's opponent.
         """
         board_size = len(chess_board)
-        print("the board size is", board_size)
-
+        
+        
+        '''
         my_coord, my_dir = my_pos
         my_pos = my_coord
-        
+        '''
+        '''
         adv_coord, adv_dir = adv_pos
         adv_pos = adv_coord
-        
+        '''
         
         # Union-Find
         father = dict()
@@ -222,30 +224,27 @@ class StudentAgent(Agent):
         losses = []
         ties = []
         neither = []
-        (adv_coord,dir) = adv_pos
-        adv_pos = adv_coord
 
         for move in valid_moves:
-            (my_coord,dir) = move
-            move = my_coord
+            (r_c,dir) = move
+            move = r_c
             # play move on board
             is_endgame, p0_score, p1_score = self.check_endgame(move, chess_board, adv_pos)
             # check/sort
             if not is_endgame:
-                neither.append(move)
+                neither.append((r_c,dir))
             else:
                 win_blocks = -1
                 if p0_score > p1_score: # student_agent wins
                     win_blocks = p0_score
-                    self.insert(wins, win_blocks, move) # not putting the actual move in list
+                    self.insert(wins, win_blocks, (r_c,dir)) # not putting the actual move in list
                 elif p0_score < p1_score: # student_agent loses
                     win_blocks = p1_score
-                    self.insert(losses, win_blocks, move, ascending=False)
+                    self.insert(losses, win_blocks, (r_c,dir), ascending=False)
                 else:
-                    ties.append(move)
+                    ties.append((r_c,dir))
             # undo move on board
-            coord, dir = move
-            r, c = coord
+            r, c = move
             self.undo(r, c, dir, chess_board)
 
         return wins, losses, ties, neither
