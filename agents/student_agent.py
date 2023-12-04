@@ -204,6 +204,26 @@ class StudentAgent(Agent):
         '''
         return True, p0_score, p1_score
     
+    def update_chess_board(self, move, chess_board, value):
+        board_size = len(chess_board)
+
+        UP = self.dir_map["u"]
+        RIGHT = self.dir_map["r"]
+        DOWN = self.dir_map["d"]
+        LEFT = self.dir_map["l"]
+
+        position, direction = move
+
+        chess_board[position[0]][position[1]][direction] = value
+        if direction == UP and position[0] > 0:
+            chess_board[position[0] - 1][position[1]][DOWN] = value
+        elif direction == RIGHT and position[1] < board_size - 1:
+            chess_board[position[0]][position[1] + 1][LEFT] = value
+        elif direction == DOWN and position[0] < board_size - 1:
+            chess_board[position[0] + 1][position[1]][UP] = value
+        elif direction == LEFT and position[1] > 0:
+            chess_board[position[0]][position[1] - 1][RIGHT] = value
+    
     def sorted_moves(self, valid_moves, my_pos, chess_board, adv_pos):
         """
         Sorts all_possible_moves by running check_endgame() on each one
@@ -216,7 +236,9 @@ class StudentAgent(Agent):
             (r_c,dir) = move
             move = r_c
             # play move on board
+            self.update_chess_board((r_c,dir), chess_board, 1)
             is_endgame, p0_score, p1_score = self.check_endgame(move, chess_board, adv_pos)
+            
             # check/sort
             if not is_endgame:
                 neither.append((r_c,dir))
@@ -224,19 +246,28 @@ class StudentAgent(Agent):
                 win_blocks = -1
                 if p0_score > p1_score: # student_agent wins
                     win_blocks = p0_score
-                    self.insert(wins, win_blocks, (r_c,dir))
+                    
+                    wins = self.insert(wins, win_blocks, (r_c,dir))
+                    
                 elif p0_score < p1_score: # student_agent loses
                     win_blocks = p1_score
                     self.insert(losses, win_blocks, (r_c,dir), ascending=False)
                 else:
                     ties.append((r_c,dir))
+
             # undo move on board
             r, c = move
             self.undo(r, c, dir, chess_board)
+            self.update_chess_board((r_c,dir), chess_board, 0)
 
+        wins = [move for score, move in wins]
+        losses = [move for score, move in losses]
+        ties = [move for score, move in ties]
+
+        print("wins:", wins,"losses", losses, "neither", neither)
         return wins, losses, ties, neither
     
-    def insert(self, mlist, n, move, ascending = True):
+    def insert2(self, mlist, n, move, ascending = True):
         index = len(mlist)
         # Searching for the position
         if ascending:
@@ -255,6 +286,30 @@ class StudentAgent(Agent):
         else:
             mlist = mlist[:index] + [n] + mlist[index:]
         return mlist
+
+    def insert(self, mlist, score, move, ascending=True):
+        index = len(mlist)
+        new_entry = (score, move)
+
+        # Searching for the position
+        if ascending:
+            for i in range(len(mlist)):
+                if mlist[i][0] > score:  # Compare scores
+                    index = i
+                    break
+        else:
+            for i in range(len(mlist)):
+                if mlist[i][0] < score:  # Compare scores
+                    index = i
+                    break
+
+        # Inserting n in the list
+        if index == len(mlist):
+            mlist = mlist[:index] + [new_entry]
+        else:
+            mlist = mlist[:index] + [new_entry] + mlist[index:]
+        return mlist
+
     
     def best_move(self, my_pos, max_step, chess_board, adv_pos):
 
