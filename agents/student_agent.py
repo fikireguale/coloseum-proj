@@ -249,7 +249,7 @@ class StudentAgent(Agent):
                     wins = self.insert(wins, win_blocks, (r_c,dir), ascending=False)
                 elif p0_score < p1_score:
                     win_blocks = p1_score
-                    self.insert(losses, win_blocks, (r_c,dir), ascending=False)
+                    losses = self.insert(losses, win_blocks, (r_c,dir), ascending=False)
                 else:
                     ties.append((r_c,dir))
             # undo move on board
