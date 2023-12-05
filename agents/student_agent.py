@@ -289,7 +289,7 @@ class StudentAgent(Agent):
         wins, losses, ties, neither = self.sorted_moves(moves, my_pos, chess_board, adv_pos)
         sorted_moves = {"wins": wins, "losses": losses, "ties": ties, "neither": neither}
         my_move = None
-
+        #print("w:" , wins, "l: ", losses, "t: ", ties)
         if wins:
             return wins[0]
         elif not neither and ties:
@@ -308,6 +308,23 @@ class StudentAgent(Agent):
             heapq.heappush(best_moves, (heuristic, m))
             self.undo(x, y, dir, chess_board_copy)
         top = heapq.heappop(best_moves)
+        top_coord, top_dir = top[1]
+        top_x, top_y = top_coord
+        self.set_barrier(top_x, top_y, top_dir, chess_board_copy)
+        op_moves = self.get_possible_moves(adv_pos, max_step, chess_board_copy, top_coord)
+        op_wins, op_losses, op_ties, op_neither = self.sorted_moves(op_moves, adv_pos, chess_board_copy, top_coord)
+        self.undo(top_x, top_y, top_dir, chess_board_copy)
+        if op_wins and best_moves:
+            top = heapq.heappop(best_moves)
+            top_coord, top_dir = top[1]
+            top_x, top_y = top_coord
+            self.set_barrier(top_x, top_y, top_dir, chess_board_copy)
+            op_moves = self.get_possible_moves(adv_pos, max_step, chess_board_copy, top_coord)
+            op_wins, op_losses, op_ties, op_neither = self.sorted_moves(op_moves, adv_pos, chess_board_copy, top_coord)
+            self.undo(top_x, top_y, top_dir, chess_board_copy)
+
+        if not best_moves and ties:
+            top = ties[0]
         # print(top)
         # while best_moves:
         # print("heap:", heapq.heappop(best_moves))
