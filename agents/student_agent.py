@@ -259,7 +259,7 @@ class StudentAgent(Agent):
             chess_board[position[0]][position[1] - 1][RIGHT] = value
     
     def sorted_moves(self, valid_moves, my_pos, chess_board, adv_pos):
-         """
+        """
         Sorts the valid moves based on their potential outcomes by 
         running check_endgame() on each one.
 
@@ -364,7 +364,7 @@ class StudentAgent(Agent):
             heapq.heappush(best_moves, (heuristic, m))
             self.undo(x, y, dir, chess_board_copy)
 
-        #Pop the best move from heap and check if the opponent can win immediately on their turn
+        # Pop the best move from heap and check if the opponent can win immediately on their turn
         # if we play this move
         top = heapq.heappop(best_moves)
         top_coord, top_dir = top[1]
