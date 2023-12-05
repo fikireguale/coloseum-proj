@@ -247,7 +247,7 @@ class StudentAgent(Agent):
                 if p0_score > p1_score: # student_agent wins
                     win_blocks = p0_score
                     wins = self.insert(wins, win_blocks, (r_c,dir), ascending=False)
-                elif p0_score < p1_score: # student_agent loses
+                elif p0_score < p1_score:
                     win_blocks = p1_score
                     self.insert(losses, win_blocks, (r_c,dir), ascending=False)
                 else:
@@ -257,26 +257,6 @@ class StudentAgent(Agent):
         wins = [move for score, move in wins]
 
         return wins, losses, ties, neither
-    
-    def insert2(self, mlist, n, move, ascending = True):
-        index = len(mlist)
-        # Searching for the position
-        if ascending:
-            for i in range(len(mlist)):
-                if mlist[i] > n:
-                    index = i
-                    break
-        else:
-            for i in range(len(mlist)):
-                if mlist[i] < n:
-                    index = i
-                    break
-        # Inserting n in the list
-        if index == len(mlist):
-            mlist = mlist[:index] + [n]
-        else:
-            mlist = mlist[:index] + [n] + mlist[index:]
-        return mlist
 
     def insert(self, mlist, score, move, ascending=True):
         index = len(mlist)
