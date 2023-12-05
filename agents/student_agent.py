@@ -205,6 +205,15 @@ class StudentAgent(Agent):
         return True, p0_score, p1_score
     
     def update_chess_board(self, move, chess_board, value):
+        """
+        Input:
+        - move (tuple of position and direction)
+        - chess_board (array): current state board
+        - value (int): The value to set at the specified move (remove wall = 0, place wall = 1)
+
+        This function updates walls on the chess board depending on the move and direction played. 
+        The corresponding opposite wall is updated.
+        """
         board_size = len(chess_board)
 
         UP = self.dir_map["u"]
@@ -213,8 +222,9 @@ class StudentAgent(Agent):
         LEFT = self.dir_map["l"]
 
         position, direction = move
-
+        # update move's wall
         chess_board[position[0]][position[1]][direction] = value
+        # update move's corresponding opposite wall
         if direction == UP and position[0] > 0:
             chess_board[position[0] - 1][position[1]][DOWN] = value
         elif direction == RIGHT and position[1] < board_size - 1:
@@ -225,21 +235,26 @@ class StudentAgent(Agent):
             chess_board[position[0]][position[1] - 1][RIGHT] = value
     
     def sorted_moves(self, valid_moves, my_pos, chess_board, adv_pos):
-        """
-        Sorts all_possible_moves by running check_endgame() on each one
-        Input: current game
-        Output: wins, losses, ties, neither (all arrays)
+         """
+        Sorts the valid moves based on their potential outcomes by 
+        running check_endgame() on each one.
+
+        Input:
+        - valid_moves (list): A list of valid moves to consider from get_possible_moves()
+
+        Output: 
+        - wins, losses, ties, neither (all arrays containing moves --> tuple of position and direction)
         """
         wins, losses, ties, neither = ([] for _ in range(4))
 
         for move in valid_moves:
             (r_c,dir) = move
             move = r_c
-            # play move on board
+            # Play the move on board
             self.update_chess_board((r_c,dir), chess_board, 1)
             is_endgame, p0_score, p1_score = self.check_endgame(move, chess_board, adv_pos)
             
-            # check/sort
+            # Categorize the move based on the endgame()
             if not is_endgame:
                 neither.append((r_c,dir))
             else:
@@ -252,7 +267,7 @@ class StudentAgent(Agent):
                     losses = self.insert(losses, win_blocks, (r_c,dir), ascending=False)
                 else:
                     ties.append((r_c,dir))
-            # undo move on board
+            # Undo the move on board
             self.update_chess_board((r_c,dir), chess_board, 0)
         wins = [move for score, move in wins]
         losses = [move for score, move in losses]
@@ -260,6 +275,7 @@ class StudentAgent(Agent):
         return wins, losses, ties, neither
 
     def insert(self, mlist, score, move, ascending=True):
+        "Sorted Insert"
         index = len(mlist)
         new_entry = (score, move)
 
