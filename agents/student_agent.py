@@ -246,25 +246,16 @@ class StudentAgent(Agent):
                 win_blocks = -1
                 if p0_score > p1_score: # student_agent wins
                     win_blocks = p0_score
-                    
-                    wins = self.insert(wins, win_blocks, (r_c,dir))
-                    
+                    wins = self.insert(wins, win_blocks, (r_c,dir), ascending=False)
                 elif p0_score < p1_score: # student_agent loses
                     win_blocks = p1_score
                     self.insert(losses, win_blocks, (r_c,dir), ascending=False)
                 else:
                     ties.append((r_c,dir))
-
             # undo move on board
-            r, c = move
-            self.undo(r, c, dir, chess_board)
             self.update_chess_board((r_c,dir), chess_board, 0)
-
         wins = [move for score, move in wins]
-        losses = [move for score, move in losses]
-        ties = [move for score, move in ties]
 
-        print("wins:", wins,"losses", losses, "neither", neither)
         return wins, losses, ties, neither
     
     def insert2(self, mlist, n, move, ascending = True):
@@ -319,11 +310,9 @@ class StudentAgent(Agent):
         my_move = None
 
         if wins:
-            coord, dir = wins[0]
-            return coord
+            return wins[0]
         elif not neither:
-            coord, dir = ties[0]
-            return coord
+            return ties[0]
 
         best_moves = []
         heapq.heapify(best_moves)
