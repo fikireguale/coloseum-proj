@@ -33,96 +33,118 @@ class StudentAgent(Agent):
         self.moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
 
     def get_possible_moves(self, my_pos, max_step, chess_board, adv_pos):
-        # Moves (Up, Right, Down, Left)
-        moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
+        '''
+        A funtion that looks at current position and returns list of possible moves via BFS
+        Input: my_position, chess_board, max steps(int)
+        Output: list of coordinates+dir ((int, int), int)
+        '''
+
+        #Initiate list of visited nodes
         seen = set()
         bfs = [my_pos]
         x, y = my_pos
         seen.add((x, y))
+
+        #Depth counter
         dist = 0
         counter = 1
         next_count = 0
-        # board_size = len(chess_board)
-        # distances = np.ones([board_size, board_size], dtype=int) * (2 * board_size + 2)
-        # distances[x, y] = 0
-        # print(distances)
 
+        #List of allowed moves
         allowed_moves = []
-        # Pick steps random but allowable moves
-        while bfs:
-            # print("stuck")
-            r, c = bfs.pop(0)
-            # Build a list of the moves we can make
 
+        while bfs:
+            r, c = bfs.pop(0)
+
+            #If visited all nodes at this depth, depth + 1
             if counter == 0:
                 dist += 1
                 counter = next_count
                 next_count = 0
 
+            #Append all possible sides to put wall for each cell
             for i in range(0, 4):
                 if not chess_board[r, c, i]:
                     allowed_moves.append(((r, c), i))
-                    # distances[r, c] += 1
 
+            #Search currently visiting cell's surrounding cells
             for d in range(0, 4):
                 if dist + 1 > max_step:
                     break
-                tmp_pos = (r + moves[d][0], c + moves[d][1])
+                tmp_pos = (r + self.moves[d][0], c + self.moves[d][1])
                 a, b = tmp_pos
 
                 if not chess_board[r, c, d] and not adv_pos == tmp_pos and tmp_pos not in seen:
                     bfs.append(tmp_pos)
                     next_count += 1
                     seen.add(tmp_pos)
-                    # distances[a, b] = 0
 
             counter -= 1
-        # print(distances)
+
         return allowed_moves
 
     def distance_to_all_cells(self, my_pos, chess_board, adv_pos):
-        # Moves (Up, Right, Down, Left)
-        moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
+        '''
+           A funtion that looks at current position and returns a 2D array of board_size*board_size representing
+           the distance from the current position to that cell on the chessboard
+           [Modified from get_possible_moves]
+           Input: my_position, chess_board, max steps(int)
+           Output: boardsize*boardsize list of ints where ints are minimum distances from current position
+        '''
+
+        # Initiate list of visited nodes
         seen = set()
         bfs = [my_pos]
         x, y = my_pos
         seen.add((x, y))
+
+        # Depth counter
         dist = 0
         counter = 1
         next_count = 0
+
+        #Initiate the result chess_board and set all initial values to 2*board_size as it's the maximum distance
         board_size = len(chess_board)
-        distances = np.ones([board_size, board_size], dtype=int) * (2 * board_size + 2)
+        distances = np.ones([board_size, board_size], dtype=int) * (2 * board_size)
         distances[x, y] = 0
-        # print(distances)
-        # Pick steps random but allowable moves
+
+        #Use bfs to find the distance
         while bfs:
 
             r, c = bfs.pop(0)
-            # Build a list of the moves we can make
+
             if counter == 0:
                 dist += 1
                 counter = next_count
                 next_count = 0
 
             for d in range(0, 4):
-                tmp_pos = (r + moves[d][0], c + moves[d][1])
-                # print(not chess_board[r, c, d] and not adv_pos == tmp_pos and tmp_pos not in seen)
+                tmp_pos = (r + self.moves[d][0], c + self.moves[d][1])
                 if not chess_board[r, c, d] and not adv_pos == tmp_pos and tmp_pos not in seen:
                     bfs.append(tmp_pos)
                     distances[tmp_pos] = dist + 1
                     next_count += 1
                     seen.add(tmp_pos)
             counter -= 1
+
         return distances
 
     def calc_heuristic(self, my_pos, chess_board, adv_pos):
+        '''
+        A function that calculates the heuristic as distance between my position and the rest of
+        the board vs the opponent's distance and the rest of the board. Uses numpy for faster
+        computation.
+
+        Input: my position, chess_board (after making a move), opponent's position
+        Output: heuristic (int) for this move
+        '''
         my_potential = self.distance_to_all_cells(my_pos, chess_board, adv_pos)
         opp_potential = self.distance_to_all_cells(adv_pos, chess_board, my_pos)
-        # print("my pot:", my_potential)
-        # print("opp pot:" , opp_potential)
         return np.sum(my_potential - opp_potential)
 
     def set_barrier(self, r, c, dir, chess_board):
+        '''Copied from world'''
+
         # Set the barrier to True
         chess_board[r, c, dir] = True
         # Set the opposite barrier to True
@@ -130,9 +152,11 @@ class StudentAgent(Agent):
         chess_board[r + move[0], c + move[1], self.opposites[dir]] = True
 
     def undo(self, r, c, dir, chess_board):
-        # Set the barrier to True
+        '''A function that removes a barrier'''
+
+        # Set the barrier to False
         chess_board[r, c, dir] = False
-        # Set the opposite barrier to True
+        # Set the opposite barrier to False
         move = self.moves[dir]
         chess_board[r + move[0], c + move[1], self.opposites[dir]] = False
 
@@ -284,22 +308,38 @@ class StudentAgent(Agent):
 
     
     def best_move(self, my_pos, max_step, chess_board, adv_pos):
+        ''''A function that returns the best move determined by the heuristics
+        Input: current_position, max_step, chess_board, opponent's position
+        Output: move in format ((int, int), int)'''
 
+        #Generate list of possible moves
         moves = self.get_possible_moves(my_pos, max_step, chess_board, adv_pos)
+
+        #Sort the moves into game ending and non-game ending moves
         wins, losses, ties, neither = self.sorted_moves(moves, my_pos, chess_board, adv_pos)
         sorted_moves = {"wins": wins, "losses": losses, "ties": ties, "neither": neither}
         my_move = None
-        #print("w:" , wins, "l: ", losses, "t: ", ties)
+
+        #If there are winning moves, play it
         if wins:
             return wins[0]
+
+        #If all moves are game ending and no winning, play tie
         elif not neither and ties:
             return ties[0]
+
+        #otherwise play only possible move
         elif not neither and not ties and losses:
             return losses[0]
 
+
+        #Make heap to sort moves by heuristic
+        #Us = Max player, opponent = min player
         best_moves = []
         heapq.heapify(best_moves)
         chess_board_copy = copy.deepcopy(chess_board)
+
+        #For moves in neither, calculate the heuristic
         for m in sorted_moves["neither"]:
             coord, dir = m
             x, y = coord
@@ -307,6 +347,9 @@ class StudentAgent(Agent):
             heuristic = self.calc_heuristic(coord, chess_board_copy, adv_pos)
             heapq.heappush(best_moves, (heuristic, m))
             self.undo(x, y, dir, chess_board_copy)
+
+        #Pop the best move from heap and check if the opponent can win immediately on their turn
+        # if we play this move
         top = heapq.heappop(best_moves)
         top_coord, top_dir = top[1]
         top_x, top_y = top_coord
@@ -314,6 +357,8 @@ class StudentAgent(Agent):
         op_moves = self.get_possible_moves(adv_pos, max_step, chess_board_copy, top_coord)
         op_wins, op_losses, op_ties, op_neither = self.sorted_moves(op_moves, adv_pos, chess_board_copy, top_coord)
         self.undo(top_x, top_y, top_dir, chess_board_copy)
+
+        # if yes, we play the next best move
         if op_wins and best_moves:
             top = heapq.heappop(best_moves)
             top_coord, top_dir = top[1]
@@ -323,11 +368,10 @@ class StudentAgent(Agent):
             op_wins, op_losses, op_ties, op_neither = self.sorted_moves(op_moves, adv_pos, chess_board_copy, top_coord)
             self.undo(top_x, top_y, top_dir, chess_board_copy)
 
+        #if there's no moves left, play ties, otherwise return a losing move
         if not best_moves and ties:
             top = ties[0]
-        # print(top)
-        # while best_moves:
-        # print("heap:", heapq.heappop(best_moves))
+
         return top[1]
 
     def step(self, chess_board, my_pos, adv_pos, max_step):
