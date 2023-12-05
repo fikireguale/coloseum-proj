@@ -255,6 +255,7 @@ class StudentAgent(Agent):
             # undo move on board
             self.update_chess_board((r_c,dir), chess_board, 0)
         wins = [move for score, move in wins]
+        losses = [move for score, move in losses]
 
         return wins, losses, ties, neither
 
@@ -291,8 +292,10 @@ class StudentAgent(Agent):
 
         if wins:
             return wins[0]
-        elif not neither:
+        elif not neither and ties:
             return ties[0]
+        elif not neither and not ties and losses:
+            return losses[0]
 
         best_moves = []
         heapq.heapify(best_moves)
