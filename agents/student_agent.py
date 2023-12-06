@@ -83,7 +83,7 @@ class StudentAgent(Agent):
 
         return allowed_moves
 
-    def distance_to_all_cells(self, my_pos, chess_board, adv_pos):
+    def distance_to_all_cells(self, my_pos, chess_board, adv_pos, me):
         '''
            A funtion that looks at current position and returns a 2D array of board_size*board_size representing
            the distance from the current position to that cell on the chessboard
@@ -118,15 +118,30 @@ class StudentAgent(Agent):
                 counter = next_count
                 next_count = 0
 
+            if (r,c) == adv_pos:
+                counter-=1
+                continue
+
             for d in range(0, 4):
                 tmp_pos = (r + self.moves[d][0], c + self.moves[d][1])
-                if not chess_board[r, c, d] and not adv_pos == tmp_pos and tmp_pos not in seen:
+                if not chess_board[r, c, d] and tmp_pos not in seen:
                     bfs.append(tmp_pos)
-                    distances[tmp_pos] = dist + 1
+                    ''' #Uncomment block to enforce a penalty for moving away
+                    if tmp_pos == adv_pos and me:
+                        #modify the scalar -1 for penalty increase, lower = higher penalty
+                        distances[tmp_pos] = (dist + 1)*-1
+                    
+                    else:
+                        distances[tmp_pos] = (dist + 1)
+                    '''
+
+                    #no penalty: comment out this line if enforcing penalty
+                    distances[tmp_pos] = (dist + 1)
+
+
                     next_count += 1
                     seen.add(tmp_pos)
             counter -= 1
-
         return distances
 
     def calc_heuristic(self, my_pos, chess_board, adv_pos):
@@ -138,8 +153,8 @@ class StudentAgent(Agent):
         Input: my position, chess_board (after making a move), opponent's position
         Output: heuristic (int) for this move
         '''
-        my_potential = self.distance_to_all_cells(my_pos, chess_board, adv_pos)
-        opp_potential = self.distance_to_all_cells(adv_pos, chess_board, my_pos)
+        my_potential = self.distance_to_all_cells(my_pos, chess_board, adv_pos, True)
+        opp_potential = self.distance_to_all_cells(adv_pos, chess_board, my_pos, False)
         return np.sum(my_potential - opp_potential)
 
     def set_barrier(self, r, c, dir, chess_board):
@@ -413,7 +428,8 @@ class StudentAgent(Agent):
         start_time = time.time()
         time_taken = time.time() - start_time
 
-        # print()
+        #print(self.distance_to_all_cells(my_pos, copy.deepcopy(chess_board), adv_pos, True))
+        #print(self.distance_to_all_cells(my_pos, copy.deepcopy(chess_board), adv_pos, False))
         my_pos, a = self.best_move(my_pos, max_step, chess_board, adv_pos)
         # print("RETURNED MOVES", my_pos, a)
         #print("My AI's turn took ", time_taken, "seconds.")
